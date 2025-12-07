@@ -2,3 +2,5 @@
 .venv
 
 /data
+
+leetcode_data.db
