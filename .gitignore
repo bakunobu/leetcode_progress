@@ -2,5 +2,6 @@
 .venv
 
 /data
+/img
 
 leetcode_data.db
