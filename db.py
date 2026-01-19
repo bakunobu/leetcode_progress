@@ -1,5 +1,6 @@
 import sqlite3
 import pandas as pd
+import datetime as dt
 
 class DataBaseOperator():
     def __init__(
@@ -45,7 +46,9 @@ class DataBaseOperator():
             (date, rank)
             )
 
-    def write_to_problems(self, date, problem_lvl):
+    def write_to_problems(self, problem_lvl, date:str=None):
+        if date is None:
+            date = dt.datetime.now().strftime('%Y-%m-%d')
         self.write_to_db(
             self.problems_table_name,
             self.problems_table_schema,
