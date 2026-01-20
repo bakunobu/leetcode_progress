@@ -26,7 +26,7 @@ def hand_input() -> str:
             continue
             
         if len(parts) == 1:
-            return rec
+            return rec, None
         
         if len(parts) == 2:
             date_str = parts[1]
@@ -36,7 +36,7 @@ def hand_input() -> str:
                 today = dt.date.today()
                 
                 if input_date <= today:
-                    return rec
+                    return rec.split(' ')
                 else:
                     print("Can't add future date")
             except ValueError:
@@ -44,5 +44,12 @@ def hand_input() -> str:
         else:
             # Handles cases like "E 2023-10-05 extra" or "E M"
             print('Wrong input. Try again.')
+
+def save_to_db(conn, db, table):
+    difficulty, date_str = hand_input()
+    query = f"""INSERT INTO {table} (difficulty, date) VALUES ({difficulty}, {date_str})"""
+    conn.execute(query)
+    conn.commit()
+
 
 
