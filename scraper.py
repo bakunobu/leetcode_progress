@@ -50,10 +50,17 @@ def graphql_request(query, variables):
     req = Request(
         GRAPHQL_URL,
         data=payload,
-        headers={"Content-Type": "application/json"},
+        headers={
+            "Content-Type": "application/json",
+            "User-Agent": "Mozilla/5.0 (compatible; leetcode-progress-scraper/1.0)",
+            "Referer": "https://leetcode.com/",
+        },
     )
+    print(f"[DEBUG] Sending request to {GRAPHQL_URL} with query: {query[:80]}...", file=sys.stderr)
     resp = urlopen(req, timeout=TIMEOUT)
-    return json.loads(resp.read().decode("utf-8"))
+    raw = resp.read().decode("utf-8")
+    print(f"[DEBUG] Response status: {resp.status}, body preview: {raw[:200]}", file=sys.stderr)
+    return json.loads(raw)
 
 
 def fetch_stats(username):
@@ -84,15 +91,18 @@ def fetch_stats(username):
     # Fetch rating
     try:
         rating_data = graphql_request(rating_query, {"username": username})
+        print(f"[DEBUG] rating_data: {json.dumps(rating_data)[:300]}", file=sys.stderr)
         ranking = rating_data.get("data", {}).get("userContestRanking")
         rating = int(ranking["rating"]) if ranking else 0
-    except (URLError, KeyError, TypeError, ValueError) as e:
+    except Exception as e:
+        print(f"[DEBUG] rating fetch failed: {type(e).__name__}: {e}", file=sys.stderr)
         errors.append(f"rating: {e}")
         rating = 0
 
     # Fetch solved counts
     try:
         solved_data = graphql_request(solved_query, {"username": username})
+        print(f"[DEBUG] solved_data: {json.dumps(solved_data)[:300]}", file=sys.stderr)
         ac_list = (
             solved_data.get("data", {})
             .get("matchedUser", {})
@@ -103,7 +113,8 @@ def fetch_stats(username):
         easy = counts.get("Easy", 0)
         medium = counts.get("Medium", 0)
         hard = counts.get("Hard", 0)
-    except (URLError, KeyError, TypeError, ValueError) as e:
+    except Exception as e:
+        print(f"[DEBUG] solved fetch failed: {type(e).__name__}: {e}", file=sys.stderr)
         errors.append(f"solved counts: {e}")
         easy = medium = hard = 0
 
@@ -131,14 +142,17 @@ def record_exists(records, today):
 def main():
     username = load_config()
     today = date.today().isoformat()
+    print(f"[DEBUG] username={username}, today={today}", file=sys.stderr)
 
     records = load_existing_data()
+    print(f"[DEBUG] loaded {len(records)} existing records", file=sys.stderr)
 
     if record_exists(records, today):
         print(f"Record for {today} already exists. Skipping.")
         return
 
     stats = fetch_stats(username)
+    print(f"[DEBUG] fetched stats: {json.dumps(stats)}", file=sys.stderr)
     records.append(stats)
 
     with open(DATA_FILE, "w") as f:
