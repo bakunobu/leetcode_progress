@@ -9,3 +9,5 @@
 leetcode_data.db
 
 db_migrate.ipynb
+
+/__pycache__

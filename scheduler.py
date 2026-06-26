@@ -80,8 +80,6 @@ def save_stats(nickname, response_ts, rating, easy, medium, hard, total):
 
 def job():
     """Fetch today's LeetCode stats and persist them."""
-    # Import here so the scheduler module does not depend on
-    # requests/bs4 at import time.
     from utils import parse
 
     nickname, response_ts_str, rating, easy, medium, hard, total = parse()
@@ -107,7 +105,6 @@ def main():
     print("Scheduler started. Waiting for 14:00 UTC+1 …", file=sys.stderr)
 
     # Run the job once immediately on startup (optional, for testing).
-    # Remove the line below if you only want the scheduled run.
     job()
 
     try:

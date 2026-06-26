@@ -1,10 +1,9 @@
-import re
 import json
 import os
+import time
 import datetime as dt
-import doctest
+
 import requests
-from bs4 import BeautifulSoup
 
 CONFIG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
 GRAPHQL_URL = "https://leetcode.com/graphql"
@@ -47,7 +46,7 @@ def parse(url: str = "https://leetcode.com/u") -> tuple:
         A seven-element tuple ``(nickname, response_ts, rating,
         easy, medium, hard, total)``:
         - *nickname* – the LeetCode user id (from config.json).
-        - *response_ts* – current UTC date/time in ISO‑8601 format.
+        - *response_ts* – current UTC date/time in ISO8601 format.
         - *rating* – user's contest rating (integer; 0 if unranked).
         - *easy, medium, hard* – number of AC submissions by difficulty
           in the last 24 h (0 if none).
@@ -60,8 +59,6 @@ def parse(url: str = "https://leetcode.com/u") -> tuple:
     requests.RequestException
         If a network request fails.
     """
-    import time
-
     nickname = load_config()
     now = time.time()
     cutoff = now - 86400  # 24 hours ago (Unix timestamp)
@@ -153,51 +150,3 @@ def parse(url: str = "https://leetcode.com/u") -> tuple:
     total = easy + medium + hard
     response_ts = dt.datetime.now(dt.timezone.utc).isoformat()
     return (nickname, response_ts, rating, easy, medium, hard, total)
-
-
-def hand_input() -> str:
-    """
-    Function gets user input in format (L) or (L YYYY-mm-dd) 
-    where L is question difficulty (E, M, H) and YYYY-mm-dd is the date (optional).
-
-    Returns:
-        str: The input in format 'L' or 'L YYYY-mm-dd' if date is valid and not in the future.
-
-    Raises:
-        ValueError: If date format is incorrect or date is in the future.
-    """
-    while True:
-        rec = input('Enter task difficulty (E, M, H) and date (YYYY-mm-dd, optionally): ').upper().strip()
-        
-        parts = rec.split()
-        difficulty = parts[0]
-        
-        if difficulty not in 'EHM':
-            print('Wrong input. Try again.')
-            continue
-            
-        if len(parts) == 1:
-            return rec, None
-        
-        if len(parts) == 2:
-            date_str = parts[1]
-            try:
-                # Convert the input date string to a datetime object
-                input_date = dt.datetime.strptime(date_str, '%Y-%m-%d').date()
-                today = dt.date.today()
-                
-                if input_date <= today:
-                    return rec.split(' ')
-                else:
-                    print("Can't add future date")
-            except ValueError:
-                print('Wrong input. Try again.')
-        else:
-            # Handles cases like "E 2023-10-05 extra" or "E M"
-            print('Wrong input. Try again.')
-
-def save_to_db(conn, db, table):
-    difficulty, date_str = hand_input()
-    query = f"""INSERT INTO {table} (difficulty, date) VALUES ({difficulty}, {date_str})"""
-    conn.execute(query)
-    conn.commit()
