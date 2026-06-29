@@ -28,12 +28,12 @@ def load_config():
 
 def parse(url: str = "https://leetcode.com/u") -> tuple:
     """
-    Fetch a LeetCode user's contest rating and AC submissions (last 24 h)
+    Fetch a LeetCode user's global ranking and AC submissions (last 24 h)
     broken down by difficulty.
 
     Builds the full profile URL from *url* and the nickname stored in
     ``config.json``, then queries LeetCode's GraphQL API for the user's
-    contest rating and recent accepted submissions (with difficulty).
+    global profile ranking and recent accepted submissions (with difficulty).
 
     Parameters
     ----------
@@ -43,11 +43,11 @@ def parse(url: str = "https://leetcode.com/u") -> tuple:
     Returns
     -------
     tuple
-        A seven-element tuple ``(nickname, response_ts, rating,
+        A seven-element tuple ``(nickname, response_ts, ranking,
         easy, medium, hard, total)``:
         - *nickname* – the LeetCode user id (from config.json).
         - *response_ts* – current UTC date/time in ISO8601 format.
-        - *rating* – user's contest rating (integer; 0 if unranked).
+        - *ranking* – user's global LeetCode ranking (integer; 0 if unknown).
         - *easy, medium, hard* – number of AC submissions by difficulty
           in the last 24 h (0 if none).
         - *total* – sum of easy + medium + hard.
@@ -71,24 +71,28 @@ def parse(url: str = "https://leetcode.com/u") -> tuple:
         "Referer": profile_url,
     }
 
-    # ── step 1: fetch contest rating ────────────────────────────────
-    rating_query = """
-    query userContestRanking($username: String!) {
-        userContestRanking(username: $username) {
-            rating
+    # ── step 1: fetch global profile ranking ─────────────────────────
+    ranking_query = """
+    query matchedUser($username: String!) {
+        matchedUser(username: $username) {
+            profile {
+                ranking
+            }
         }
     }
     """
-    rating_payload = {
-        "query": rating_query,
+    ranking_payload = {
+        "query": ranking_query,
         "variables": {"username": nickname},
     }
-    rating_resp = requests.post(GRAPHQL_URL, json=rating_payload,
-                                headers=headers, timeout=15)
-    rating_resp.raise_for_status()
-    rating_data = rating_resp.json()
-    ranking = rating_data.get("data", {}).get("userContestRanking")
-    rating = int(ranking["rating"]) if ranking else 0
+    ranking_resp = requests.post(GRAPHQL_URL, json=ranking_payload,
+                                 headers=headers, timeout=15)
+    ranking_resp.raise_for_status()
+    ranking_data = ranking_resp.json()
+    matched_user = ranking_data.get("data", {}).get("matchedUser")
+    ranking = 0
+    if matched_user:
+        ranking = int(matched_user.get("profile", {}).get("ranking", 0))
 
     # ── step 2: fetch recent AC submissions ─────────────────────────
     recent_query = """
@@ -149,4 +153,4 @@ def parse(url: str = "https://leetcode.com/u") -> tuple:
 
     total = easy + medium + hard
     response_ts = dt.datetime.now(dt.timezone.utc).isoformat()
-    return (nickname, response_ts, rating, easy, medium, hard, total)
+    return (nickname, response_ts, ranking, easy, medium, hard, total)

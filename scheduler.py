@@ -56,13 +56,13 @@ def init_db():
     Base.metadata.create_all(engine)
 
 
-def save_stats(nickname, response_ts, rating, easy, medium, hard, total):
+def save_stats(nickname, response_ts, ranking, easy, medium, hard, total):
     """Insert a new DailyStats row and commit."""
     with Session(engine) as session:
         row = DailyStats(
             nickname=nickname,
             response_ts=response_ts,
-            rating=rating,
+            rating=ranking,  # 'rating' column stores global ranking
             easy=easy,
             medium=medium,
             hard=hard,
@@ -72,7 +72,7 @@ def save_stats(nickname, response_ts, rating, easy, medium, hard, total):
         session.commit()
         print(
             f"[{response_ts}] Saved: {nickname} "
-            f"rating={rating} "
+            f"ranking={ranking} "
             f"e={easy} m={medium} h={hard} t={total}",
             file=sys.stderr,
         )
@@ -82,7 +82,7 @@ def job():
     """Fetch today's LeetCode stats and persist them."""
     from utils import parse
 
-    nickname, response_ts_str, rating, easy, medium, hard, total = parse()
+    nickname, response_ts_str, ranking, easy, medium, hard, total = parse()
 
     # The timestamp from parse() is an ISO string; convert to aware datetime.
     try:
@@ -90,7 +90,7 @@ def job():
     except ValueError:
         ts = datetime.now(timezone.utc)
 
-    save_stats(nickname, ts, rating, easy, medium, hard, total)
+    save_stats(nickname, ts, ranking, easy, medium, hard, total)
 
 
 def main():

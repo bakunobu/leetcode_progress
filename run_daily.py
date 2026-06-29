@@ -20,7 +20,7 @@ def main() -> int:
     """Fetch and save one daily snapshot."""
     init_db()
 
-    nickname, response_ts_str, rating, easy, medium, hard, total = parse()
+    nickname, response_ts_str, ranking, easy, medium, hard, total = parse()
 
     # The timestamp from parse() is an ISO string; convert to aware datetime.
     try:
@@ -28,7 +28,7 @@ def main() -> int:
     except ValueError:
         ts = datetime.now(timezone.utc)
 
-    save_stats(nickname, ts, rating, easy, medium, hard, total)
+    save_stats(nickname, ts, ranking, easy, medium, hard, total)
     return 0
 
 
