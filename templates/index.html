@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard — LeetCode Progress{% endblock %}
+
+{% block content %}
+<div class="summary-cards">
+    <div class="card">
+        <h3>Total Problems Solved</h3>
+        <p class="card-value">{{ summary.total_problems }}</p>
+    </div>
+    <div class="card">
+        <h3>Days Tracked</h3>
+        <p class="card-value">{{ summary.days_tracked }}</p>
+    </div>
+    <div class="card">
+        <h3>Current Rank</h3>
+        <p class="card-value">{{ summary.current_rank }}</p>
+    </div>
+    <div class="card">
+        <h3>Best Rank</h3>
+        <p class="card-value">{{ summary.best_rank }}</p>
+    </div>
+    <div class="card card-accent">
+        <h3>Rank Change</h3>
+        <p class="card-value {% if summary.rank_change > 0 %}positive{% elif summary.rank_change < 0 %}negative{% endif %}">
+            {{ "+" if summary.rank_change > 0 else "" }}{{ summary.rank_change }}
+        </p>
+    </div>
+</div>
+
+{% if latest %}
+<div class="latest-stats">
+    <h2>Latest Snapshot</h2>
+    <table class="stats-table">
+        <tr>
+            <th>Date</th>
+            <td>{{ latest.dt[:10] }}</td>
+        </tr>
+        <tr>
+            <th>Ranking</th>
+            <td>{{ latest.user_rank }}</td>
+        </tr>
+        <tr>
+            <th>Problems (24h)</th>
+            <td>{{ latest.num_problems }}</td>
+        </tr>
+    </table>
+</div>
+{% endif %}
+
+<div class="history-section">
+    <h2>Recent History</h2>
+    {% if history %}
+    <div class="table-wrapper">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Ranking</th>
+                    <th>Problems Solved</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in history %}
+                <tr>
+                    <td>{{ row.dt[:10] }}</td>
+                    <td>{{ row.user_rank }}</td>
+                    <td>{{ row.num_problems }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="empty-state">No data yet. <a href="{{ url_for('refresh') }}">Fetch your first stats</a>.</p>
+    {% endif %}
+</div>
+{% endblock %}

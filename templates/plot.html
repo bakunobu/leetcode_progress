@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block title %}Progress Plot — LeetCode Progress{% endblock %}
+
+{% block content %}
+<div class="plot-page">
+    <h2>Progress Plot</h2>
+
+    {% if error %}
+    <div class="alert alert-error">{{ error }}</div>
+    {% endif %}
+
+    {% if plot_url %}
+    <div class="plot-image-container">
+        <img src="{{ url_for('static', filename='img/' + plot_url.split('/')[-1]) }}"
+             alt="LeetCode Progress Plot"
+             class="plot-image" />
+    </div>
+    <p class="plot-hint">
+        <a href="{{ url_for('plot') }}" class="btn">Regenerate Plot</a>
+    </p>
+    {% else %}
+    <p class="empty-state">
+        No plot available yet.
+        {% if not error %}
+        <a href="{{ url_for('refresh') }}">Fetch some data first</a>, then come back here.
+        {% endif %}
+    </p>
+    {% endif %}
+</div>
+{% endblock %}
