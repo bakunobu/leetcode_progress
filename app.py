@@ -88,6 +88,24 @@ def refresh():
         )
 
 
+@app.route("/sync-sheets")
+def sync_sheets():
+    """Download data from Google Sheets and update the local DB."""
+    try:
+        from sync_google_sheets import sync_from_sheets
+
+        count = sync_from_sheets()
+        return redirect(url_for("index"))
+    except Exception as exc:
+        return render_template(
+            "index.html",
+            latest={},
+            summary=get_summary_stats(),
+            history=[],
+            error=f"Google Sheets sync failed: {exc}",
+        )
+
+
 # ── CLI entry point ────────────────────────────────────────────────
 
 if __name__ == "__main__":

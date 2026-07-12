@@ -11,3 +11,6 @@ leetcode_data.db
 db_migrate.ipynb
 
 /__pycache__
+
+# Google Sheets service-account credentials (DO NOT COMMIT)
+google_credentials.json

@@ -75,4 +75,9 @@
     <p class="empty-state">No data yet. <a href="{{ url_for('refresh') }}">Fetch your first stats</a>.</p>
     {% endif %}
 </div>
+
+<div class="action-bar">
+    <a href="{{ url_for('refresh') }}" class="btn btn-primary">⟳ Fetch from LeetCode</a>
+    <a href="{{ url_for('sync_sheets') }}" class="btn btn-secondary">⬇ Sync from Google Sheets</a>
+</div>
 {% endblock %}
