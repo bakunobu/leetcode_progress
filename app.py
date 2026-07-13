@@ -106,6 +106,48 @@ def sync_sheets():
         )
 
 
+@app.route("/upload-remote")
+def upload_remote():
+    """Upload the local SQLite DB to the remote server via SCP."""
+    try:
+        from upload_to_remote import upload_to_remote
+
+        success = upload_to_remote()
+        if not success:
+            raise RuntimeError("Upload returned False — check config and remote server.")
+        return redirect(url_for("index"))
+    except Exception as exc:
+        return render_template(
+            "index.html",
+            latest={},
+            summary=get_summary_stats(),
+            history=[],
+            error=f"Remote upload failed: {exc}",
+        )
+
+
+@app.route("/sync-and-upload")
+def sync_and_upload():
+    """Sync from Google Sheets, then upload the local DB to remote server."""
+    try:
+        from sync_google_sheets import sync_from_sheets
+        from upload_to_remote import upload_to_remote
+
+        sync_from_sheets()
+        success = upload_to_remote()
+        if not success:
+            raise RuntimeError("Upload returned False — check config and remote server.")
+        return redirect(url_for("index"))
+    except Exception as exc:
+        return render_template(
+            "index.html",
+            latest={},
+            summary=get_summary_stats(),
+            history=[],
+            error=f"Sync + upload failed: {exc}",
+        )
+
+
 # ── CLI entry point ────────────────────────────────────────────────
 
 if __name__ == "__main__":

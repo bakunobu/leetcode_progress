@@ -1,4 +1,11 @@
 {
     "user_id": "",
-    "spreadsheet_key": ""
+    "spreadsheet_key": "",
+    "remote": {
+        "host": "",
+        "port": 22,
+        "username": "",
+        "remote_path": "",
+        "key_filename": ""
+    }
 }
