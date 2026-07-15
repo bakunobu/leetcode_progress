@@ -79,7 +79,29 @@
 <div class="action-bar">
     <a href="{{ url_for('refresh') }}" class="btn btn-primary">⟳ Fetch from LeetCode</a>
     <a href="{{ url_for('sync_sheets') }}" class="btn btn-secondary">⬇ Sync from Google Sheets</a>
-    <a href="{{ url_for('upload_remote') }}" class="btn btn-secondary">☁ Upload to Remote</a>
-    <a href="{{ url_for('sync_and_upload') }}" class="btn btn-accent">⬇☁ Sync & Upload</a>
+    <a href="{{ url_for('upload_remote') }}" class="btn btn-secondary">☁ Upload Full DB to Remote</a>
+
+    <details class="batch-controls">
+        <summary class="btn btn-accent">⬇☁ Sync & Upload (Batch)</summary>
+        <form class="batch-form" method="GET" action="{{ url_for('sync_and_upload') }}">
+            <div class="batch-form-row">
+                <label>
+                    Max records:
+                    <input type="number" name="max_records" min="1"
+                           placeholder="e.g. 100" class="batch-input">
+                </label>
+                <label>
+                    Max age (hours):
+                    <input type="number" name="max_age_hours" min="1"
+                           placeholder="e.g. 24" class="batch-input">
+                </label>
+                <label class="checkbox-label">
+                    <input type="checkbox" name="upsert" value="1">
+                    Upsert
+                </label>
+                <button type="submit" class="btn btn-accent btn-sm">Run</button>
+            </div>
+        </form>
+    </details>
 </div>
 {% endblock %}

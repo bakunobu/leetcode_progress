@@ -6,6 +6,11 @@
         "port": 22,
         "username": "",
         "remote_path": "",
-        "key_filename": ""
+        "key_filename": "",
+        "remote_db_path": "",
+        "batch": {
+            "max_records": null,
+            "max_age_hours": 24
+        }
     }
 }

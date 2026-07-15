@@ -385,6 +385,220 @@ def upload_to_remote(
     )
 
 
+# ── SQL-pipe upload (batch upload via SSH + sqlite3 CLI) ────────────
+
+def generate_insert_sql(
+    records: list[dict],
+    table_name: str = "daily_stats",
+    upsert: bool = False,
+    batch_size: int = 100,
+) -> str:
+    """Generate SQL INSERT statements for a list of records.
+
+    Builds ``INSERT OR IGNORE`` (or ``INSERT OR REPLACE`` if *upsert*) statements
+    in batches of *batch_size* records per statement.  Also prepends a
+    ``CREATE UNIQUE INDEX IF NOT EXISTS`` statement so that the conflict
+    resolution works correctly on the remote.
+
+    Parameters
+    ----------
+    records : list[dict]
+        Records with keys matching ``DailyStats`` columns:
+        ``nickname``, ``response_ts``, ``rating``, ``easy``, ``medium``,
+        ``hard``, ``total``.
+    table_name : str
+        Target table name (default ``"daily_stats"``).
+    upsert : bool
+        If ``True``, use ``INSERT OR REPLACE``; otherwise ``INSERT OR IGNORE``.
+    batch_size : int
+        Max number of records per ``INSERT`` statement (default 100).
+
+    Returns
+    -------
+    str
+        Complete SQL script ready to pipe into ``sqlite3``.
+    """
+    if not records:
+        return ""
+
+    columns = ["nickname", "response_ts", "rating", "easy", "medium", "hard", "total"]
+
+    # ── Ensure the remote table has a UNIQUE index on response_ts ──
+    sql_parts: list[str] = [
+        f"CREATE UNIQUE INDEX IF NOT EXISTS idx_{table_name}_response_ts "
+        f"ON {table_name}(response_ts);"
+    ]
+
+    # ── Batch records into chunks ──────────────────────────────────
+    nl = "\n"  # workaround for Python < 3.12 (backslash in f-string expr)
+    for chunk_start in range(0, len(records), batch_size):
+        chunk = records[chunk_start : chunk_start + batch_size]
+        value_rows: list[str] = []
+
+        for record in chunk:
+            escaped: list[str] = []
+            for col in columns:
+                val = record.get(col)
+                if val is None:
+                    escaped.append("NULL")
+                elif isinstance(val, int):
+                    escaped.append(str(val))
+                elif isinstance(val, float):
+                    escaped.append(str(val))
+                elif hasattr(val, "isoformat"):  # datetime / date
+                    escaped.append(f"'{val.isoformat()}'")
+                else:
+                    # string — escape single quotes by doubling them
+                    escaped.append(f"'{str(val).replace(chr(39), chr(39)+chr(39))}'")
+            value_rows.append(f"({', '.join(escaped)})")
+
+        stmt = "INSERT OR REPLACE INTO" if upsert else "INSERT OR IGNORE INTO"
+        sql_parts.append(
+            f"{stmt} {table_name} "
+            f"({', '.join(columns)}){nl}"
+            f"VALUES{nl}{f',{nl}'.join(value_rows)};"
+        )
+
+    return "\n".join(sql_parts)
+
+
+def upload_records_via_sql_pipe(
+    records: list[dict],
+    remote_db_path: str,
+    host: str,
+    username: str,
+    port: int = 22,
+    key_filename: str | None = None,
+    table_name: str = "daily_stats",
+    upsert: bool = False,
+    batch_size: int = 100,
+    verbose: bool = True,
+) -> bool:
+    """Upload a list of records to a remote SQLite DB via SSH-piped SQL.
+
+    Generates ``INSERT`` statements from *records* and pipes them into the
+    remote server's ``sqlite3`` CLI over SSH.  The remote DB file is created
+    automatically by ``sqlite3`` if it does not already exist.
+
+    Parameters
+    ----------
+    records : list[dict]
+        Records with keys matching ``DailyStats`` columns.
+    remote_db_path : str
+        Absolute path to the SQLite database on the remote server.
+    host : str
+        Remote hostname or IP.
+    username : str
+        SSH username.
+    port : int
+        SSH port (default 22).
+    key_filename : str | None
+        Path to an SSH private key file.
+    table_name : str
+        Target table name (default ``"daily_stats"``).
+    upsert : bool
+        If ``True``, use ``INSERT OR REPLACE``; otherwise ``INSERT OR IGNORE``.
+    batch_size : int
+        Max records per ``INSERT`` statement (default 100).
+    verbose : bool
+        Print progress to stderr.
+
+    Returns
+    -------
+    bool
+        ``True`` on success, ``False`` on failure.
+    """
+    if not records:
+        if verbose:
+            print("No records to upload.", file=sys.stderr)
+        return True
+
+    if verbose:
+        print(
+            f"Uploading {len(records)} record(s) to {username}@{host}:{remote_db_path} "
+            f"via SQL-pipe …",
+            file=sys.stderr,
+        )
+
+    # ── Generate SQL ───────────────────────────────────────────────
+    sql = generate_insert_sql(
+        records=records,
+        table_name=table_name,
+        upsert=upsert,
+        batch_size=batch_size,
+    )
+
+    # ── Build SSH command ──────────────────────────────────────────
+    ssh_cmd = [
+        "ssh",
+        "-o", "ConnectTimeout=10",
+        "-o", "StrictHostKeyChecking=accept-new",
+        "-o", "BatchMode=yes",
+    ]
+    if port != 22:
+        ssh_cmd.extend(["-p", str(port)])
+    if key_filename:
+        ssh_cmd.extend(["-i", os.path.expanduser(key_filename)])
+
+    # The remote command: feed SQL into sqlite3
+    remote_cmd = f"sqlite3 {shlex.quote(remote_db_path)}"
+    ssh_cmd.append(f"{username}@{host}")
+    ssh_cmd.append(remote_cmd)
+
+    if verbose:
+        # Show a censored version of the command
+        display_cmd = (
+            f"ssh {' '.join(shlex.quote(p) for p in ssh_cmd[1:-2])} "
+            f"{username}@{host} {remote_cmd}"
+        )
+        print(f"  Running: {display_cmd}", file=sys.stderr)
+
+    # ── Execute ────────────────────────────────────────────────────
+    try:
+        proc = subprocess.Popen(
+            ssh_cmd,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+    except FileNotFoundError:
+        print(
+            "ERROR: 'ssh' command not found. Install OpenSSH client.",
+            file=sys.stderr,
+        )
+        return False
+
+    try:
+        stdout, stderr = proc.communicate(input=sql, timeout=120)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+        stdout, stderr = proc.communicate()
+        print("ERROR: SSH pipe timed out after 120 seconds.", file=sys.stderr)
+        return False
+
+    if proc.returncode != 0:
+        print(
+            f"SQL-pipe upload failed (exit code {proc.returncode}):",
+            file=sys.stderr,
+        )
+        if stderr:
+            # Filter out the SQL from stderr to avoid clutter
+            clean_stderr = stderr.strip()
+            if clean_stderr:
+                print(f"  stderr: {clean_stderr}", file=sys.stderr)
+        return False
+
+    if verbose:
+        # sqlite3 may print row counts on stdout
+        rows_output = stdout.strip()
+        if rows_output:
+            print(f"  Remote sqlite3 output: {rows_output}", file=sys.stderr)
+        print(f"  Successfully uploaded {len(records)} record(s).", file=sys.stderr)
+
+    return True
+
+
 # ── CLI entry point ──────────────────────────────────────────────────
 
 def main() -> int:

@@ -55,6 +55,14 @@ def init_db():
     """Create tables if they do not already exist."""
     Base.metadata.create_all(engine)
 
+    # Create a UNIQUE index on response_ts for idempotent inserts.
+    # This enables INSERT OR IGNORE / INSERT OR REPLACE on both local and
+    # remote DBs without producing duplicate rows.
+    from sqlalchemy import Index
+
+    index = Index("idx_daily_stats_response_ts", DailyStats.response_ts, unique=True)
+    index.create(bind=engine, checkfirst=True)
+
 
 def save_stats(nickname, response_ts, ranking, easy, medium, hard, total):
     """Insert a new DailyStats row and commit."""

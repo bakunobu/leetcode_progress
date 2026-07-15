@@ -128,15 +128,29 @@ def upload_remote():
 
 @app.route("/sync-and-upload")
 def sync_and_upload():
-    """Sync from Google Sheets, then upload the local DB to remote server."""
-    try:
-        from sync_google_sheets import sync_from_sheets
-        from upload_to_remote import upload_to_remote
+    """Sync from Google Sheets, then upload filtered records to remote.
 
-        sync_from_sheets()
-        success = upload_to_remote()
-        if not success:
-            raise RuntimeError("Upload returned False — check config and remote server.")
+    Accepts optional query parameters for batch limiting:
+    * ``max_records`` — only upload the last N records.
+    * ``max_age_hours`` — only upload records newer than N hours.
+    * ``upsert`` — set to ``1`` to update existing rows.
+
+    If no batch parameters are given, defaults from ``config.json``
+    (``remote.batch``) are used.
+    """
+    try:
+        from sync_and_upload import sync_and_upload as combined_process
+
+        # Read query parameters (optional)
+        max_records = request.args.get("max_records", type=int, default=None)
+        max_age_hours = request.args.get("max_age_hours", type=int, default=None)
+        upsert = request.args.get("upsert", type=str, default="") == "1"
+
+        count = combined_process(
+            max_records=max_records,
+            max_age_hours=max_age_hours,
+            upsert=upsert,
+        )
         return redirect(url_for("index"))
     except Exception as exc:
         return render_template(
