@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LeetCode Progress — bakunobu</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, sans-serif;
+            background: #0d1117;
+            color: #c9d1d9;
+            padding: 2rem;
+            min-height: 100vh;
+        }
+        .container { max-width: 1000px; margin: 0 auto; }
+
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+        .subtitle {
+            color: #8b949e;
+            margin-bottom: 2rem;
+            font-size: 0.95rem;
+        }
+
+        .nickname-badge {
+            display: inline-block;
+            background: #1f6feb;
+            color: #fff;
+            padding: 0.3rem 1rem;
+            border-radius: 999px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        .summary-card {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 1.25rem;
+        }
+        .summary-card h3 {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #8b949e;
+            margin-bottom: 0.75rem;
+        }
+        .summary-card .big {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #58a6ff;
+        }
+        .summary-card .label {
+            font-size: 0.8rem;
+            color: #8b949e;
+            margin-top: 0.25rem;
+        }
+
+        .section { margin-bottom: 2.5rem; }
+        .section h2 {
+            font-size: 1.3rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .section h2 small {
+            font-size: 0.8rem;
+            font-weight: 400;
+            color: #8b949e;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        th {
+            background: #21262d;
+            color: #8b949e;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 0.75rem 1rem;
+            text-align: left;
+        }
+        td {
+            padding: 0.6rem 1rem;
+            border-top: 1px solid #21262d;
+            font-size: 0.9rem;
+        }
+        tr:first-child td { border-top: none; }
+        .rating { font-variant-numeric: tabular-nums; }
+        .num { text-align: center; }
+        .diff-easy { color: #3fb950; }
+        .diff-medium { color: #d29922; }
+        .diff-hard { color: #f85149; }
+
+        .footer {
+            text-align: center;
+            color: #484f58;
+            font-size: 0.8rem;
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #21262d;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="nickname-badge">{{ nickname }}</div>
+        <h1>LeetCode Progress</h1>
+        <p class="subtitle">Your daily coding stats, tracked automatically</p>
+
+        <div class="summary-grid">
+            <div class="summary-card">
+                <h3>Last Calendar Week</h3>
+                <div class="big">{{ week.total }}</div>
+                <div class="label">problems solved</div>
+                <div style="margin-top: 0.5rem; font-size: 0.85rem;">
+                    <span class="diff-easy">{{ week.easy }} easy</span> ·
+                    <span class="diff-medium">{{ week.medium }} medium</span> ·
+                    <span class="diff-hard">{{ week.hard }} hard</span>
+                </div>
+                <div class="label" style="margin-top: 0.5rem;">
+                    {{ week.days_with_data }} days with data · Rating: {{ week.current_rating }}
+                </div>
+            </div>
+            <div class="summary-card">
+                <h3>Last 30 Days</h3>
+                <div class="big">{{ month.total }}</div>
+                <div class="label">problems solved</div>
+                <div style="margin-top: 0.5rem; font-size: 0.85rem;">
+                    <span class="diff-easy">{{ month.easy }} easy</span> ·
+                    <span class="diff-medium">{{ month.medium }} medium</span> ·
+                    <span class="diff-hard">{{ month.hard }} hard</span>
+                </div>
+                <div class="label" style="margin-top: 0.5rem;">
+                    {{ month.days_with_data }} days with data · Rating: {{ month.current_rating }}
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Last Calendar Week <small>{{ week.start }} — {{ week.end }}</small></h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Rating</th>
+                        <th class="num diff-easy">Easy</th>
+                        <th class="num diff-medium">Medium</th>
+                        <th class="num diff-hard">Hard</th>
+                        <th class="num">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in week.stats %}
+                    <tr>
+                        <td>{{ s.response_ts[:10] }}</td>
+                        <td class="rating">{{ s.rating }}</td>
+                        <td class="num diff-easy">{{ s.easy }}</td>
+                        <td class="num diff-medium">{{ s.medium }}</td>
+                        <td class="num diff-hard">{{ s.hard }}</td>
+                        <td class="num">{{ s.total }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="section">
+            <h2>Last 30 Days <small>{{ month.start }} — {{ month.end }}</small></h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Rating</th>
+                        <th class="num diff-easy">Easy</th>
+                        <th class="num diff-medium">Medium</th>
+                        <th class="num diff-hard">Hard</th>
+                        <th class="num">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in month.stats %}
+                    <tr>
+                        <td>{{ s.response_ts[:10] }}</td>
+                        <td class="rating">{{ s.rating }}</td>
+                        <td class="num diff-easy">{{ s.easy }}</td>
+                        <td class="num diff-medium">{{ s.medium }}</td>
+                        <td class="num diff-hard">{{ s.hard }}</td>
+                        <td class="num">{{ s.total }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="footer">
+            Data from LeetCode Stats tracker · Last updated {{ now }}
+        </div>
+    </div>
+</body>
+</html>
